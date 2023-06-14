@@ -56,5 +56,10 @@ namespace MvcMovie.Controllers
 
             return View(movie);
         }
+
+        public async Task<IActionResult> Create()
+        {
+            return View();
+        }
     }
 }

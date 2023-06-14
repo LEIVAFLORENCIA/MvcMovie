@@ -61,5 +61,14 @@ namespace MvcMovie.Controllers
         {
             return View();
         }
+
+        public async Task<IActionResult> Delete(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound(); // TODO: Agregar una vista
+            }
+            return View();
+        }
     }
 }

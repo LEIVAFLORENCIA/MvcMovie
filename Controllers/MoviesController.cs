@@ -1,40 +1,49 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MvcMovie.Models;
+using Microsoft.Data.SqlClient;
 
 namespace MvcMovie.Controllers
 {
     public class MoviesController : Controller
     {
+        private string connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog = MoviesADO; Integrated Security = True; Connect Timeout = 30; Encrypt=False;";
+        public static List<Movie> listMovies = new List<Movie>();
+
         // GET: Movies
         public async Task<IActionResult> Index()
         {
-            var listMovies = new List<Movie>();
 
-            var movie1 = new Movie
+            try
             {
-                Genre = "Terror",
-                Id = 1,
-                Price = 1,
-                ReleaseDate = DateTime.Now,
-                Title = "La noche del terror"
-            };
-            listMovies.Add(movie1);
+                listMovies.Clear();
+                SqlConnection connection = new SqlConnection(connectionString);
+                connection.Open();
 
-            var movie2 = new Movie
+                string SELECT_MOVIES = "SELECT * FROM Movies";
+                SqlCommand command = new SqlCommand(SELECT_MOVIES, connection);
+                SqlDataReader reader = command.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    Movie movie = new Movie()
+                    {
+                        Id = int.Parse(reader[0].ToString()),
+                        Genre = reader[1].ToString(),
+                        Price = (decimal) Double.Parse(reader[2].ToString()),
+                        ReleaseDate = DateTime.Parse(reader[3].ToString()),
+                        Title = reader[4].ToString()
+                    };
+                    listMovies.Add(movie);
+                }
+                connection.Close();
+                return View(listMovies);
+            }
+            catch (Exception ex)
             {
-                Genre = "Terror",
-                Id = 1,
-                Price = 1,
-                ReleaseDate = DateTime.Now,
-                Title = "La noche del terror II"
-            };
-            listMovies.Add(movie2);
-
-            return View(listMovies);
-
+                throw;
+            }        
         }
 
-        // GET: Movies/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -42,33 +51,86 @@ namespace MvcMovie.Controllers
                 return NotFound(); // TODO: Agregar una vista
             }
 
-            //Simulación de creación de un objeto (model)
-            //Mas adelante vamos a ver como usar una base de datos
-            var movie = new Movie
+            try
             {
-                Genre = "Terror",
-                Id = 1,
-                Price = 1,
-                ReleaseDate = DateTime.Now,
-                Title = "La noche del terror"
-            };
+                SqlConnection connection = new SqlConnection(connectionString);
+                connection.Open();
+                string SELECT_MOVIE_BY_ID = "SELECT * FROM Movies where id=@Id;";
+                SqlCommand command = new SqlCommand(SELECT_MOVIE_BY_ID, connection);
+                command.Parameters.AddWithValue("@Id", id);
 
-
-            return View(movie);
-        }
-
-        public async Task<IActionResult> Create()
-        {
-            return View();
-        }
-
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound(); // TODO: Agregar una vista
+                SqlDataReader reader = command.ExecuteReader();
+                Movie movie = null;
+                while (reader.Read())
+                {
+                    movie = new Movie()
+                    {
+                        Id = (int)reader[0],
+                        Genre = reader[1].ToString(),
+                        Price = (decimal)Double.Parse(reader[2].ToString()),
+                        ReleaseDate = (DateTime)reader[3],
+                        Title = reader[4].ToString()
+                    };
+                }
+                connection.Close();
+                return View(movie);
             }
-            return View();
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public IActionResult Create()
+        {
+            var model = new Movie();
+            return View(model);
+        }
+
+        [HttpPost]
+        public ActionResult Create(Movie movie)
+        {
+            try
+            {
+                SqlConnection connection = new SqlConnection(connectionString);
+
+                connection.Open();
+                string INSERT_MOVIE = "INSERT INTO Movies (Genre, Price, ReleaseDate, Title) VALUES (@Genre, @Price, @ReleaseDate, @Title);";
+                SqlCommand command = new SqlCommand(INSERT_MOVIE, connection);
+                command.Parameters.AddWithValue("@Genre", movie.Genre);
+                command.Parameters.AddWithValue("@Price", movie.Price);
+                command.Parameters.AddWithValue("@ReleaseDate", movie.ReleaseDate);
+                command.Parameters.AddWithValue("@Title", movie.Title);
+
+                // Ejecuta la consulta
+                SqlDataReader reader = command.ExecuteReader();
+                connection.Close();
+                return RedirectToAction("Index");
+
+            }catch(Exception ex)
+            {
+                throw;
+            }
+        }
+        
+        public ActionResult Delete(int? id)
+        {
+            try
+            {
+                SqlConnection connection = new SqlConnection(connectionString);
+                connection.Open();
+                string DELETE_MOVIE = "DELETE FROM Movies where id=@Id;";
+                SqlCommand command = new SqlCommand(DELETE_MOVIE, connection);
+                command.Parameters.AddWithValue("@Id", id);
+
+                SqlDataReader reader = command.ExecuteReader();
+                connection.Close();
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
     }
 }
